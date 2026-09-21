@@ -1,1 +1,1382 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GEBRAK BACA - SDN 004 Batu Ampar</title>
+    
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#2563eb',    /* Biru Utama */
+                        secondary: '#f59e0b',  /* Kuning Amber Cerah */
+                        accent: '#10b981',     /* Hijau Segar */
+                        school: '#1e3a8a',     /* Biru Tua Sekolah */
+                        admin: '#dc2626',      /* Merah Admin */
+                    },
+                    fontFamily: {
+                        sans: ['"Plus Jakarta Sans"', 'sans-serif'],
+                    }
+                }
+            }
+        }
+    </script>
 
+    <!-- Google Fonts & Font Awesome Icons -->
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <!-- React 18 & Babel CDN -->
+    <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+    <style>
+        body { 
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            background-color: #f0f9ff; 
+            color: #1f2937;
+        }
+        .hide-scrollbar::-webkit-scrollbar { display: none; }
+        .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+        .card-hover { transition: transform 0.2s ease, box-shadow 0.2s ease; }
+        .card-hover:hover { transform: translateY(-4px); box-shadow: 0px 15px 25px rgba(37, 99, 235, 0.15); }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect, useMemo } = React;
+
+        const ADMIN_PIN = "11001647";
+        const KATEGORI = ["📖 Cerita", "🔬 Sains", "🌱 Lingkungan", "🌏 Budaya", "💡 Pengetahuan", "⭐ Karya Murid"];
+        const KELAS = ["Semua Kelas", "Kelas 1", "Kelas 2", "Kelas 3", "Kelas 4", "Kelas 5", "Kelas 6", "Guru"];
+
+        const Toast = ({ message, onClose }) => {
+            if (!message) return null;
+            return (
+                <div className="fixed top-20 right-4 z-[110] bg-school text-white px-5 py-3 rounded-2xl shadow-xl flex items-center gap-3 animate-bounce border-2 border-amber-400">
+                    <span className="text-amber-400 text-lg">🔔</span>
+                    <span className="font-extrabold text-xs md:text-sm">{message}</span>
+                    <button onClick={onClose} className="text-gray-300 hover:text-white font-black text-sm ml-2">✕</button>
+                </div>
+            );
+        };
+
+        const ConfirmModal = ({ isOpen, title, message, onConfirm, onCancel }) => {
+            if (!isOpen) return null;
+            return (
+                <div className="fixed inset-0 z-[120] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
+                    <div className="bg-white rounded-3xl p-6 md:p-8 max-w-md w-full shadow-2xl border-4 border-red-100 animate-in fade-in zoom-in duration-150">
+                        <div className="w-14 h-14 bg-red-100 text-red-600 rounded-2xl flex items-center justify-center text-2xl mx-auto mb-4 font-black">
+                            <i className="fas fa-trash-alt"></i>
+                        </div>
+                        <h3 className="text-xl font-black text-gray-800 text-center mb-2">{title}</h3>
+                        <p className="text-gray-600 font-semibold text-center text-sm mb-6">{message}</p>
+                        <div className="flex gap-3">
+                            <button 
+                                onClick={onCancel} 
+                                className="flex-1 py-3 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-2xl font-black text-sm transition-colors"
+                            >
+                                Batal
+                            </button>
+                            <button 
+                                onClick={onConfirm} 
+                                className="flex-1 py-3 bg-red-600 hover:bg-red-700 text-white rounded-2xl font-black text-sm shadow-md transition-colors"
+                            >
+                                Ya, Hapus!
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            );
+        };
+
+        const EditBookModal = ({ book, isOpen, onClose, onSave }) => {
+            if (!isOpen || !book) return null;
+            const [formData, setFormData] = useState({ ...book });
+
+            const handleChange = (e) => setFormData({ ...formData, [e.target.name]: e.target.value });
+
+            const handleSubmit = (e) => {
+                e.preventDefault();
+                onSave(formData);
+            };
+
+            return (
+                <div className="fixed inset-0 z-[120] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto">
+                    <div className="bg-white rounded-3xl p-6 md:p-8 max-w-2xl w-full shadow-2xl border-2 border-blue-100 my-8">
+                        <div className="flex justify-between items-center mb-6 pb-3 border-b border-gray-100">
+                            <h3 className="text-xl font-black text-school flex items-center gap-2">
+                                <i className="fas fa-edit text-primary"></i> Edit Karya Buku Digital
+                            </h3>
+                            <button onClick={onClose} className="text-gray-400 hover:text-gray-600 font-black text-lg">✕</button>
+                        </div>
+
+                        <form onSubmit={handleSubmit} className="space-y-4">
+                            <div className="grid md:grid-cols-2 gap-4">
+                                <div>
+                                    <label className="block text-gray-700 font-extrabold text-xs mb-1">Judul Buku</label>
+                                    <input required type="text" name="title" value={formData.title} onChange={handleChange} className="w-full bg-gray-50 border-2 border-gray-200 rounded-xl py-2 px-3 font-bold text-gray-700 text-sm focus:border-primary focus:outline-none" />
+                                </div>
+                                <div>
+                                    <label className="block text-gray-700 font-extrabold text-xs mb-1">Penulis</label>
+                                    <input required type="text" name="author" value={formData.author} onChange={handleChange} className="w-full bg-gray-50 border-2 border-gray-200 rounded-xl py-2 px-3 font-bold text-gray-700 text-sm focus:border-primary focus:outline-none" />
+                                </div>
+                            </div>
+
+                            <div className="grid md:grid-cols-2 gap-4">
+                                <div>
+                                    <label className="block text-gray-700 font-extrabold text-xs mb-1">Kategori</label>
+                                    <select name="category" value={formData.category} onChange={handleChange} className="w-full bg-gray-50 border-2 border-gray-200 rounded-xl py-2 px-3 font-bold text-gray-700 text-sm focus:border-primary focus:outline-none">
+                                        {KATEGORI.map(c => <option key={c} value={c}>{c}</option>)}
+                                    </select>
+                                </div>
+                                <div>
+                                    <label className="block text-gray-700 font-extrabold text-xs mb-1">Kelas / Peran</label>
+                                    <select name="class" value={formData.class} onChange={handleChange} className="w-full bg-gray-50 border-2 border-gray-200 rounded-xl py-2 px-3 font-bold text-gray-700 text-sm focus:border-primary focus:outline-none">
+                                        {KELAS.filter(c => c !== "Semua Kelas").map(c => <option key={c} value={c}>{c}</option>)}
+                                    </select>
+                                </div>
+                            </div>
+
+                            <div>
+                                <label className="block text-gray-700 font-extrabold text-xs mb-1">URL Sampul (Cover Image)</label>
+                                <input type="url" name="cover" value={formData.cover} onChange={handleChange} className="w-full bg-gray-50 border-2 border-gray-200 rounded-xl py-2 px-3 font-bold text-gray-700 text-sm focus:border-primary focus:outline-none" />
+                            </div>
+
+                            <div>
+                                <label className="block text-gray-700 font-extrabold text-xs mb-1">Deskripsi Buku</label>
+                                <textarea name="description" value={formData.description} onChange={handleChange} rows="3" className="w-full bg-gray-50 border-2 border-gray-200 rounded-xl py-2 px-3 font-bold text-gray-700 text-sm focus:border-primary focus:outline-none"></textarea>
+                            </div>
+
+                            <div>
+                                <label className="block text-gray-700 font-extrabold text-xs mb-1">Link Flipbook (Heyzine, Canva, dll)</label>
+                                <input required type="url" name="flipbookLink" value={formData.flipbookLink} onChange={handleChange} className="w-full bg-gray-50 border-2 border-gray-200 rounded-xl py-2 px-3 font-bold text-gray-700 text-sm focus:border-primary focus:outline-none" />
+                            </div>
+
+                            <div className="flex justify-end gap-3 pt-4 border-t border-gray-100">
+                                <button type="button" onClick={onClose} className="px-5 py-2.5 bg-gray-100 hover:bg-gray-200 text-gray-700 font-black rounded-xl text-xs">Batal</button>
+                                <button type="submit" className="px-5 py-2.5 bg-primary hover:bg-blue-700 text-white font-black rounded-xl text-xs shadow-md flex items-center gap-2">
+                                    <i className="fas fa-save"></i> Simpan Perubahan
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            );
+        };
+
+        const Button = ({ children, onClick, variant = 'primary', className = '', icon, disabled, type = 'button' }) => {
+            const baseStyle = "font-black rounded-2xl transition-all duration-200 flex items-center justify-center gap-2 shadow-sm active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed";
+            const variants = {
+                primary: "bg-primary hover:bg-blue-700 text-white shadow-blue-200 shadow-md",
+                secondary: "bg-amber-400 hover:bg-amber-500 text-amber-950 shadow-amber-200 shadow-md border border-amber-300",
+                accent: "bg-accent hover:bg-emerald-600 text-white",
+                outline: "bg-white hover:bg-gray-100 text-gray-700 border-2 border-gray-200",
+                danger: "bg-red-500 hover:bg-red-600 text-white",
+                admin: "bg-purple-600 hover:bg-purple-700 text-white shadow-purple-200 shadow-md"
+            };
+            return (
+                <button type={type} onClick={onClick} disabled={disabled} className={`${baseStyle} ${variants[variant] || variants.primary} ${className}`}>
+                    {icon && <i className={`fas ${icon}`}></i>}
+                    <span>{children}</span>
+                </button>
+            );
+        };
+
+        const BookCard = ({ book, onClick, isAdmin, onDelete, onEdit }) => (
+            <div className="bg-white rounded-3xl p-3 border border-gray-100 shadow-sm card-hover flex flex-col justify-between group h-full relative">
+                {isAdmin && (
+                    <div className="absolute top-2 right-2 z-20 flex gap-1 bg-white/95 backdrop-blur-md p-1 rounded-xl shadow-md border border-gray-200">
+                        <button 
+                            title="Edit Buku" 
+                            onClick={(e) => { e.stopPropagation(); onEdit(book); }} 
+                            className="w-7 h-7 bg-blue-50 hover:bg-blue-100 text-primary rounded-lg flex items-center justify-center text-xs font-bold transition-colors"
+                        >
+                            <i className="fas fa-pencil"></i>
+                        </button>
+                        <button 
+                            title="Hapus Buku" 
+                            onClick={(e) => { e.stopPropagation(); onDelete(book); }} 
+                            className="w-7 h-7 bg-red-50 hover:bg-red-100 text-red-600 rounded-lg flex items-center justify-center text-xs font-bold transition-colors"
+                        >
+                            <i className="fas fa-trash-alt"></i>
+                        </button>
+                    </div>
+                )}
+                
+                <div onClick={() => onClick(book)} className="cursor-pointer">
+                    <div className="relative overflow-hidden rounded-2xl mb-3 aspect-[3/4] bg-gray-100">
+                        <img 
+                            src={book.cover} 
+                            alt={book.title} 
+                            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                            onError={(e) => { e.target.src = "https://placehold.co/300x400/2563eb/white?text=GEBRAK+BACA"; }}
+                        />
+                        <span className="absolute top-2 left-2 bg-white/90 backdrop-blur-sm text-school font-black text-[10px] px-2.5 py-1 rounded-full shadow-sm">
+                            {book.category}
+                        </span>
+                        {book.isStudent && (
+                            <span className="absolute bottom-2 left-2 bg-amber-400 text-amber-950 font-black text-[10px] px-2.5 py-1 rounded-full shadow-sm">
+                                ⭐ Karya Murid
+                            </span>
+                        )}
+                    </div>
+                    <h3 className="font-black text-gray-800 text-xs md:text-sm line-clamp-2 mb-1 group-hover:text-primary transition-colors leading-snug">
+                        {book.title}
+                    </h3>
+                    <p className="text-[11px] font-bold text-gray-500 mb-2 truncate">
+                        ✍️ {book.author} <span className="text-gray-400 font-normal">({book.class})</span>
+                    </p>
+                </div>
+                
+                <div className="pt-2 border-t border-gray-100 flex items-center justify-between text-[11px] font-bold text-gray-400">
+                    <span onClick={() => onClick(book)} className="flex items-center gap-1 text-primary cursor-pointer hover:underline">
+                        <i className="fas fa-book-open"></i> Baca
+                    </span>
+                    <div className="flex items-center gap-2">
+                        <span><i className="fas fa-eye"></i> {book.views || 0}</span>
+                        <span><i className="fas fa-heart text-red-400"></i> {book.likes || 0}</span>
+                    </div>
+                </div>
+            </div>
+        );
+
+        const initialBooks = [
+            { 
+                id: 2, 
+                title: "Mengenal Sejarah Batu Ampar & Kekayaan Pulau Batam", 
+                author: "Tim Literasi Guru", 
+                class: "Guru", 
+                category: "🌏 Budaya", 
+                description: "Buku panduan edukatif bergambar yang mengenalkan kebudayaan Melayu Batam, sejarah daerah Batu Ampar, serta warisan maritim yang patut dibanggakan oleh generasi muda.", 
+                cover: "https://images.unsplash.com/photo-1512820790803-83ca734da794?auto=format&fit=crop&w=400&q=80", 
+                views: 120, 
+                likes: 45, 
+                comments: [{user: "Guru Literasi", date: "21 Sep 2026", text: "Selamat membaca anak-anak hebat SDN 004 Batu Ampar!"}], 
+                flipbookLink: "https://heyzine.com/flip-book/example2", 
+                samplePages: [
+                    "BAB 1: Warisan Budaya Melayu\n\nBatam memiliki akar budaya Melayu yang kental. Mengenal sejarah tempat tinggal kita di Batu Ampar melatih rasa bangga dan cinta tanah air sejak dini."
+                ],
+                isStudent: false, 
+                createdAt: Date.now() - 250000 
+            },
+            { 
+                id: 3, 
+                title: "Keajaiban Sains: Eksperimen Seru Tanpa Laboratorium", 
+                author: "Pak Guru Hendra", 
+                class: "Guru", 
+                category: "🔬 Sains", 
+                description: "Siapa bilang sains sulit? Buku ini memuat 10 eksperimen sains sederhana yang aman dan seru dari benda-benda sekitar kita untuk dilakukan di rumah atau kelas.", 
+                cover: "https://images.unsplash.com/photo-1532012197267-da84d127e765?auto=format&fit=crop&w=400&q=80", 
+                views: 95, 
+                likes: 38, 
+                comments: [], 
+                flipbookLink: "https://heyzine.com/flip-book/example3", 
+                samplePages: [
+                    "Eksperimen 1: Gunung Berapi Mini\n\nBahan: Cuka dapur, soda kue, dan pewarna makanan. Perhatikan reaksi kimia seru yang menciptakan letupan busa seperti gunung berapi!"
+                ],
+                isStudent: false, 
+                createdAt: Date.now() - 200000 
+            },
+            { 
+                id: 6, 
+                title: "Kamus Bergambar 3 Bahasa: Indonesia - Inggris - Melayu", 
+                author: "Tim Kurikulum SDN 004", 
+                class: "Guru", 
+                category: "💡 Pengetahuan", 
+                description: "Kamus interaktif bergambar yang memudahkan adik-adik belajar kosa kata populer dalam Bahasa Indonesia, Bahasa Inggris, dan Dialek Melayu tempatan.", 
+                cover: "https://images.unsplash.com/photo-1456513080510-7bf3a84b82f8?auto=format&fit=crop&w=400&q=80", 
+                views: 110, 
+                likes: 52, 
+                comments: [], 
+                flipbookLink: "https://heyzine.com/flip-book/example6", 
+                samplePages: [
+                    "KOSA KATA SEHARI-HARI:\n• Sekolah -> School -> Sekolah\n• Membaca -> Read -> Membaca / Menatap\n• Sahabat -> Friend -> Kawan / Budak"
+                ],
+                isStudent: false, 
+                createdAt: Date.now() - 50000 
+            }
+        ];
+
+        const Navbar = ({ navigate, user, logout }) => (
+            <header className="bg-white border-b-2 border-blue-100 sticky top-0 z-50 shadow-sm">
+                <div className="max-w-6xl mx-auto px-4 py-3 flex items-center justify-between gap-2">
+                    <div onClick={() => navigate('home')} className="flex items-center gap-3 cursor-pointer group">
+                        <div className="w-11 h-11 bg-primary text-white rounded-2xl flex items-center justify-center text-xl font-black shadow-md group-hover:rotate-6 transition-transform">
+                            📖
+                        </div>
+                        <div>
+                            <div className="font-black text-xl text-school tracking-tight leading-none group-hover:text-primary transition-colors flex items-center gap-2">
+                                GEBRAK BACA
+                                {user?.role === 'admin' && (
+                                    <span className="bg-red-500 text-white font-black text-[9px] px-2 py-0.5 rounded-full uppercase tracking-wider">GURU ADMIN</span>
+                                )}
+                            </div>
+                            <div className="text-[10px] font-extrabold text-amber-600 tracking-wider uppercase mt-0.5">
+                                SDN 004 Batu Ampar • <span className="text-primary font-black italic lowercase">by Cikgu Fadhil</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <nav className="hidden md:flex items-center gap-2">
+                        <button onClick={() => navigate('home')} className="px-3 py-2 text-sm font-bold text-gray-700 hover:text-primary rounded-xl hover:bg-blue-50">Beranda</button>
+                        <button onClick={() => navigate('collection')} className="px-3 py-2 text-sm font-bold text-gray-700 hover:text-primary rounded-xl hover:bg-blue-50">Koleksi Buku</button>
+                        <button onClick={() => navigate('student-works')} className="px-3 py-2 text-sm font-bold text-gray-700 hover:text-primary rounded-xl hover:bg-blue-50">Karya Murid</button>
+                        <button onClick={() => navigate('about')} className="px-3 py-2 text-sm font-bold text-gray-700 hover:text-primary rounded-xl hover:bg-blue-50">Tentang</button>
+                        <Button onClick={() => navigate('upload')} variant="secondary" className="py-2 px-4 text-xs" icon="fa-cloud-arrow-up">Upload Buku</Button>
+                    </nav>
+
+                    <div className="flex items-center gap-2">
+                        {user ? (
+                            <div className="flex items-center gap-2">
+                                <button onClick={() => navigate('profile')} className={`px-3 py-1.5 rounded-xl text-xs font-black flex items-center gap-2 border ${user.role === 'admin' ? 'bg-red-50 text-red-600 border-red-200' : 'bg-blue-50 text-primary border-blue-200'}`}>
+                                    <i className={`fas ${user.role === 'admin' ? 'fa-user-shield text-red-600' : 'fa-user-circle'} text-base`}></i>
+                                    <span className="hidden sm:inline">{user.name}</span>
+                                </button>
+                            </div>
+                        ) : (
+                            <Button onClick={() => navigate('login')} variant="primary" className="py-2 px-4 text-xs" icon="fa-sign-in-alt">Masuk</Button>
+                        )}
+                    </div>
+                </div>
+            </header>
+        );
+
+        const HomeView = ({ navigate, books, user, onEditBook, onDeleteBook }) => {
+            const recentBooks = [...books].sort((a, b) => b.createdAt - a.createdAt).slice(0, 4);
+            const studentBooks = books.filter(b => b.isStudent).sort((a, b) => b.likes - a.likes).slice(0, 4);
+            const isAdmin = user?.role === 'admin';
+
+            return (
+                <div className="pb-20">
+                    {/* Hero Banner */}
+                    <div className="bg-gradient-to-b from-blue-100 via-sky-50 to-white pt-10 pb-16 px-4 text-center relative overflow-hidden">
+                        <div className="max-w-4xl mx-auto relative z-10">
+                            <div className="inline-flex items-center gap-2 bg-amber-400 text-amber-950 font-black px-4 py-1.5 rounded-full mb-4 shadow-sm text-xs md:text-sm animate-pulse border border-amber-300">
+                                <i className="fas fa-rocket"></i>
+                                <span>PERPUSTAKAAN DIGITAL RESMI</span>
+                                <span>•</span>
+                                <span>SDN 004 BATU AMPAR</span>
+                            </div>
+                            
+                            <h1 className="text-4xl md:text-6xl font-black text-school mb-1 leading-tight tracking-tight">
+                                GEBRAK BACA
+                            </h1>
+                            <div className="inline-block bg-primary text-white font-black text-xs md:text-sm px-4 py-1 rounded-full mb-3 shadow-md border border-blue-400">
+                                ✨ by Cikgu Fadhil
+                            </div>
+                            <h2 className="text-lg md:text-2xl font-extrabold text-primary uppercase tracking-wide mb-2">
+                                Gerakan Membaca dan Berkarya
+                            </h2>
+                            <p className="text-2xl md:text-3xl font-black text-amber-500 italic mb-6">
+                                “Baca. Buat. Bagikan.”
+                            </p>
+                            
+                            <p className="text-base md:text-lg text-gray-700 mb-8 max-w-2xl mx-auto font-medium leading-relaxed">
+                                Ruang membaca dan berkarya digital murid SDN 004 Batu Ampar. <br className="hidden md:block"/>
+                                Perpustakaan boleh direhabilitasi, tetapi budaya membaca tak boleh berhenti!
+                            </p>
+                            
+                            <div className="flex flex-col sm:flex-row justify-center items-center gap-3 max-w-md mx-auto">
+                                <Button variant="primary" icon="fa-book-open" className="w-full sm:w-auto text-base py-3.5 px-6" onClick={() => navigate('collection')}>📚 Mulai Membaca</Button>
+                                <Button variant="secondary" icon="fa-cloud-arrow-up" className="w-full sm:w-auto text-base py-3.5 px-6" onClick={() => navigate('upload')}>⬆️ Upload Buku</Button>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Stats */}
+                    <div className="max-w-5xl mx-auto px-4 -mt-8 relative z-20">
+                        <div className="bg-white rounded-3xl shadow-xl p-6 flex flex-wrap justify-around text-center border-2 border-blue-100">
+                            <div className="w-1/3 p-2">
+                                <div className="text-3xl md:text-4xl font-black text-primary mb-1">{books.length}</div>
+                                <div className="text-xs md:text-sm font-bold text-gray-500 uppercase tracking-wider">Total Buku</div>
+                            </div>
+                            <div className="w-1/3 p-2 border-l-2 border-gray-100">
+                                <div className="text-3xl md:text-4xl font-black text-amber-500 mb-1">{books.filter(b=>b.isStudent).length}</div>
+                                <div className="text-xs md:text-sm font-bold text-gray-500 uppercase tracking-wider">Karya Murid</div>
+                            </div>
+                            <div className="w-1/3 p-2 border-l-2 border-gray-100">
+                                <div className="text-3xl md:text-4xl font-black text-accent mb-1">{books.reduce((sum, b) => sum + (b.views || 0), 0)}</div>
+                                <div className="text-xs md:text-sm font-bold text-gray-500 uppercase tracking-wider">Kali Dibaca</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Buku Terbaru */}
+                    <div className="max-w-6xl mx-auto px-4 mt-16">
+                        <div className="flex justify-between items-end mb-6">
+                            <div>
+                                <h2 className="text-2xl font-black text-gray-800">📚 Koleksi Peluncuran Terbaru</h2>
+                                <p className="text-gray-600 text-sm font-semibold">Buku dan karya segar untuk dibaca hari ini.</p>
+                            </div>
+                            <button onClick={() => navigate('collection')} className="text-primary font-bold hover:underline hidden sm:flex items-center gap-1 text-sm">
+                                Lihat Semua <i className="fas fa-arrow-right text-xs"></i>
+                            </button>
+                        </div>
+                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-6">
+                            {recentBooks.map(book => (
+                                <BookCard 
+                                    key={book.id} 
+                                    book={book} 
+                                    isAdmin={isAdmin} 
+                                    onEdit={onEditBook} 
+                                    onDelete={onDeleteBook} 
+                                    onClick={(b) => {window.currentBookId = b.id; navigate('detail');}} 
+                                />
+                            ))}
+                        </div>
+                    </div>
+
+                    {/* Karya Murid Pilihan */}
+                    <div className="max-w-6xl mx-auto px-4 mt-16">
+                        <div className="flex justify-between items-end mb-6">
+                            <div>
+                                <h2 className="text-2xl font-black text-gray-800">⭐ Karya Murid Hebat</h2>
+                                <p className="text-gray-600 text-sm font-semibold">Hasil imajinasi dan kreativitas teman-teman SDN 004 Batu Ampar.</p>
+                            </div>
+                            <button onClick={() => navigate('student-works')} className="text-amber-600 font-bold hover:underline hidden sm:flex items-center gap-1 text-sm">
+                                Lihat Semua Karya <i className="fas fa-arrow-right text-xs"></i>
+                            </button>
+                        </div>
+                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-6">
+                            {studentBooks.length > 0 ? studentBooks.map(book => (
+                                <BookCard 
+                                    key={book.id} 
+                                    book={book} 
+                                    isAdmin={isAdmin} 
+                                    onEdit={onEditBook} 
+                                    onDelete={onDeleteBook} 
+                                    onClick={(b) => {window.currentBookId = b.id; navigate('detail');}} 
+                                />
+                            )) : (
+                                <div className="col-span-4 text-center py-10 bg-amber-50 rounded-3xl border-2 border-amber-200 p-6">
+                                    <div className="text-4xl mb-2">✍️</div>
+                                    <h3 className="text-lg font-black text-amber-900 mb-1">Belum Ada Karya Murid Ditampilkan</h3>
+                                    <p className="text-amber-800 font-medium text-sm mb-4">Ayo jadi murid pertama yang mengunggah buku buatanmu ke GEBRAK BACA!</p>
+                                    <Button onClick={() => navigate('upload')} variant="secondary" className="mx-auto py-2 text-xs" icon="fa-cloud-arrow-up">Upload Buku Sekarang</Button>
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                </div>
+            );
+        };
+
+        const CollectionView = ({ navigate, books, defaultFilter = 'all', user, onEditBook, onDeleteBook }) => {
+            const [search, setSearch] = useState('');
+            const [category, setCategory] = useState('Semua');
+            const [selectedClass, setSelectedClass] = useState('Semua Kelas');
+            const isAdmin = user?.role === 'admin';
+
+            useEffect(() => {
+                if(defaultFilter === 'student') {
+                    setCategory('⭐ Karya Murid');
+                }
+            }, [defaultFilter]);
+
+            const filteredBooks = useMemo(() => {
+                return books.filter(b => {
+                    const matchSearch = b.title.toLowerCase().includes(search.toLowerCase()) || b.author.toLowerCase().includes(search.toLowerCase());
+                    const matchCategory = category === 'Semua' || b.category === category;
+                    const matchClass = selectedClass === 'Semua Kelas' || b.class === selectedClass;
+                    return matchSearch && matchCategory && matchClass;
+                });
+            }, [books, search, category, selectedClass]);
+
+            return (
+                <div className="max-w-6xl mx-auto px-4 py-8 pb-20">
+                    <div className="mb-8 text-center md:text-left">
+                        <h1 className="text-3xl font-black text-gray-800 mb-2">
+                            {defaultFilter === 'student' ? '⭐ Karya Murid SDN 004' : '📖 Koleksi Perpustakaan Digital'}
+                        </h1>
+                        <p className="text-gray-600 font-medium">Temukan buku cerita, sains, budaya, dan karya hebat teman-temanmu!</p>
+                    </div>
+
+                    {/* Filter & Search Bar */}
+                    <div className="bg-white p-5 rounded-3xl shadow-sm border border-gray-100 mb-8 space-y-4">
+                        <div className="flex flex-col md:flex-row gap-3">
+                            <div className="relative flex-grow">
+                                <i className="fas fa-search absolute left-4 top-1/2 -translate-y-1/2 text-gray-400"></i>
+                                <input 
+                                    type="text" 
+                                    value={search} 
+                                    onChange={(e)=>setSearch(e.target.value)} 
+                                    placeholder="Cari judul buku atau nama penulis..." 
+                                    className="w-full pl-11 pr-4 py-3 bg-gray-50 border-2 border-gray-200 rounded-2xl font-bold text-gray-700 focus:outline-none focus:border-primary text-sm"
+                                />
+                            </div>
+                            <select 
+                                value={selectedClass} 
+                                onChange={(e)=>setSelectedClass(e.target.value)} 
+                                className="py-3 px-4 bg-gray-50 border-2 border-gray-200 rounded-2xl font-bold text-gray-700 focus:outline-none focus:border-primary text-sm cursor-pointer"
+                            >
+                                {KELAS.map(c => <option key={c} value={c}>{c}</option>)}
+                            </select>
+                        </div>
+
+                        {/* Category Badges */}
+                        <div className="flex gap-2 overflow-x-auto pb-2 hide-scrollbar">
+                            <button 
+                                onClick={() => setCategory('Semua')} 
+                                className={`px-4 py-2 rounded-xl text-xs font-black whitespace-nowrap transition-colors ${category === 'Semua' ? 'bg-primary text-white shadow-sm' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}
+                            >
+                                Semua Kategori
+                            </button>
+                            {KATEGORI.map(cat => (
+                                <button 
+                                    key={cat} 
+                                    onClick={() => setCategory(cat)} 
+                                    className={`px-4 py-2 rounded-xl text-xs font-black whitespace-nowrap transition-colors ${category === cat ? 'bg-primary text-white shadow-sm' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}
+                                >
+                                    {cat}
+                                </button>
+                            ))}
+                        </div>
+                    </div>
+
+                    {/* Book Cards Grid */}
+                    {filteredBooks.length === 0 ? (
+                        <div className="text-center py-16 bg-white rounded-3xl border border-dashed border-gray-300 p-8">
+                            <div className="text-5xl mb-3">🔍</div>
+                            <h3 className="text-xl font-black text-gray-700 mb-1">Buku Tidak Ditemukan</h3>
+                            <p className="text-gray-500 text-sm mb-4">Coba gunakan kata kunci lain atau ganti filter kategori.</p>
+                            <Button onClick={() => {setSearch(''); setCategory('Semua'); setSelectedClass('Semua Kelas');}} variant="outline" className="mx-auto py-2 text-xs">
+                                Reset Pencarian
+                            </Button>
+                        </div>
+                    ) : (
+                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-6">
+                            {filteredBooks.map(book => (
+                                <BookCard 
+                                    key={book.id} 
+                                    book={book} 
+                                    isAdmin={isAdmin} 
+                                    onEdit={onEditBook} 
+                                    onDelete={onDeleteBook} 
+                                    onClick={(b) => {window.currentBookId = b.id; navigate('detail');}} 
+                                />
+                            ))}
+                        </div>
+                    )}
+                </div>
+            );
+        };
+
+        const BookDetailView = ({ navigate, getBook, updateBook, user, showToast, onEditBook, onDeleteBook }) => {
+            const bookId = window.currentBookId;
+            const book = getBook(bookId);
+            const [commentText, setCommentText] = useState('');
+            const [isLiked, setIsLiked] = useState(false);
+            const isAdmin = user?.role === 'admin';
+
+            if(!book) return (
+                <div className="text-center py-20 font-black text-gray-600">
+                    Buku tidak ditemukan.
+                    <div className="mt-4"><Button onClick={()=>navigate('collection')} variant="primary" className="mx-auto text-xs py-2">Kembali ke Koleksi</Button></div>
+                </div>
+            );
+
+            const handleLike = () => {
+                if(!user) { showToast("Silakan masuk terlebih dahulu untuk menyukai buku."); return; }
+                const updatedBook = {...book, likes: isLiked ? book.likes - 1 : book.likes + 1};
+                updateBook(updatedBook);
+                setIsLiked(!isLiked);
+                showToast(isLiked ? "Batal menyukai buku." : "Terima kasih sudah menyukai buku ini!");
+            };
+
+            const handleComment = (e) => {
+                e.preventDefault();
+                if(!user) { showToast("Silakan masuk terlebih dahulu untuk berkomentar."); return; }
+                if(!commentText.trim()) return;
+                
+                const updatedBook = {
+                    ...book, 
+                    comments: [...(book.comments || []), { user: user.name, text: commentText, date: new Date().toLocaleDateString('id-ID') }]
+                };
+                updateBook(updatedBook);
+                setCommentText('');
+                showToast("Apresiasi berhasil dikirim!");
+            };
+
+            const handleRead = () => {
+                updateBook({...book, views: (book.views || 0) + 1});
+                navigate('reader');
+            };
+
+            return (
+                <div className="max-w-4xl mx-auto px-4 py-8 pb-20">
+                    <div className="flex justify-between items-center mb-6">
+                        <button onClick={() => navigate('collection')} className="text-gray-600 font-bold hover:text-primary flex items-center gap-2 text-sm">
+                            <i className="fas fa-arrow-left"></i> Kembali ke Koleksi
+                        </button>
+                        
+                        {isAdmin && (
+                            <div className="flex gap-2">
+                                <Button onClick={() => onEditBook(book)} variant="outline" className="py-2 px-3 text-xs" icon="fa-edit">
+                                    Edit Karya
+                                </Button>
+                                <Button onClick={() => onDeleteBook(book)} variant="danger" className="py-2 px-3 text-xs" icon="fa-trash-alt">
+                                    Hapus
+                                </Button>
+                            </div>
+                        )}
+                    </div>
+
+                    <div className="bg-white rounded-3xl p-6 md:p-10 shadow-lg border border-gray-100 mb-8 flex flex-col md:flex-row gap-8">
+                        <div className="w-full md:w-1/3 flex-shrink-0">
+                            <img src={book.cover} alt={book.title} className="w-full rounded-2xl shadow-md aspect-[3/4] object-cover" onError={(e) => e.target.src = "https://placehold.co/300x400/2563eb/white?text=GEBRAK+BACA"} />
+                        </div>
+                        <div className="w-full md:w-2/3 flex flex-col justify-between">
+                            <div>
+                                <div className="flex flex-wrap gap-2 mb-3">
+                                    <span className="bg-blue-100 text-blue-800 text-xs px-3 py-1 rounded-full font-black">{book.category}</span>
+                                    {book.isStudent && <span className="bg-amber-100 text-amber-900 text-xs px-3 py-1 rounded-full font-black">⭐ Karya Murid</span>}
+                                </div>
+                                <h1 className="text-2xl md:text-4xl font-black text-gray-800 mb-2 leading-tight">{book.title}</h1>
+                                <p className="text-sm md:text-base text-gray-600 mb-4 font-bold border-b border-gray-100 pb-4">
+                                    <i className="fas fa-pen-nib text-primary mr-1.5"></i> Oleh: <span className="text-gray-800">{book.author}</span> <span className="text-gray-400 font-normal">({book.class})</span>
+                                </p>
+                                <p className="text-gray-700 leading-relaxed mb-6 text-sm md:text-base font-medium">{book.description}</p>
+                            </div>
+                            
+                            <div className="flex flex-wrap items-center gap-3 pt-4 border-t border-gray-100">
+                                <Button onClick={handleRead} variant="primary" icon="fa-book-reader" className="text-base px-6">Baca Sekarang</Button>
+                                <Button onClick={handleLike} variant={isLiked ? "danger" : "outline"} icon="fa-heart" className="text-sm py-2.5">
+                                    {isLiked ? 'Disukai' : 'Suka'} ({book.likes || 0})
+                                </Button>
+                                <div className="text-gray-400 font-bold ml-auto text-xs">
+                                    <i className="fas fa-eye mr-1"></i> {book.views || 0} Pembaca
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Area Apresiasi / Komentar */}
+                    <div className="bg-white rounded-3xl p-6 md:p-8 shadow-sm border border-gray-100">
+                        <h3 className="text-xl font-black text-gray-800 mb-4 flex items-center gap-2">
+                            <span>💬 Apresiasi & Komentar Teman</span>
+                        </h3>
+                        
+                        <form onSubmit={handleComment} className="mb-6 flex gap-2">
+                            <input 
+                                type="text" 
+                                value={commentText}
+                                onChange={(e)=>setCommentText(e.target.value)}
+                                placeholder={user ? "Tulis apresiasimu yang membangun..." : "Silakan masuk untuk berkomentar"}
+                                disabled={!user}
+                                className="flex-grow bg-gray-50 border-2 border-gray-200 rounded-2xl py-3 px-4 font-bold text-gray-700 focus:outline-none focus:border-primary text-sm disabled:opacity-50"
+                            />
+                            <Button type="submit" variant="primary" icon="fa-paper-plane" disabled={!user} className="px-5"></Button>
+                        </form>
+
+                        <div className="space-y-3">
+                            {!book.comments || book.comments.length === 0 ? (
+                                <p className="text-gray-500 text-center py-4 italic text-sm">Belum ada apresiasi. Jadilah yang pertama memberikan pujian!</p>
+                            ) : (
+                                book.comments.map((c, i) => (
+                                    <div key={i} className="bg-blue-50/60 p-4 rounded-2xl border border-blue-100">
+                                        <div className="flex justify-between items-center mb-1">
+                                            <span className="font-extrabold text-sm text-gray-800">{c.user}</span>
+                                            <span className="text-[10px] text-gray-400 font-bold">{c.date || 'Hari ini'}</span>
+                                        </div>
+                                        <p className="text-gray-700 text-sm font-medium">{c.text}</p>
+                                    </div>
+                                ))
+                            )}
+                        </div>
+                    </div>
+                </div>
+            );
+        };
+
+        const ReaderView = ({ navigate, getBook }) => {
+            const bookId = window.currentBookId;
+            const book = getBook(bookId);
+            const [currentPage, setCurrentPage] = useState(0);
+            const [viewMode, setViewMode] = useState('embed');
+
+            if(!book) return (
+                <div className="bg-gray-950 min-h-screen text-white p-10 font-bold text-center flex flex-col items-center justify-center">
+                    Buku tidak ditemukan.
+                    <button onClick={()=>navigate('collection')} className="mt-4 text-amber-400 underline font-black">Kembali ke Koleksi</button>
+                </div>
+            );
+
+            const samplePages = book.samplePages || [
+                `Selamat Datang di ${book.title}\n\nKarya oleh ${book.author} (${book.class})\n\nKategori: ${book.category}\n\nPerpustakaan digital GEBRAK BACA SDN 004 Batu Ampar mengajak kita semua terus rajin membaca dan berani berkarya!`
+            ];
+
+            return (
+                <div className="fixed inset-0 bg-gray-950 z-[100] flex flex-col text-white">
+                    {/* Toolbar Header */}
+                    <div className="bg-gray-900 p-3 md:p-4 flex justify-between items-center shadow-lg border-b border-gray-800">
+                        <button onClick={() => navigate('detail')} className="text-white hover:text-amber-400 transition-colors font-bold px-3 py-2 rounded-xl hover:bg-gray-800 flex items-center gap-2 text-sm">
+                            <i className="fas fa-arrow-left"></i> <span className="hidden sm:inline">Kembali</span>
+                        </button>
+                        <div className="text-center px-2">
+                            <h2 className="font-black truncate max-w-[180px] sm:max-w-md text-sm md:text-base text-amber-300">{book.title}</h2>
+                            <p className="text-[11px] text-gray-400 font-semibold">Penulis: {book.author}</p>
+                        </div>
+                        <div className="flex items-center gap-2">
+                            <button 
+                                onClick={() => setViewMode(viewMode === 'embed' ? 'interactive' : 'embed')} 
+                                className="bg-gray-800 hover:bg-gray-700 text-xs font-bold py-2 px-3 rounded-xl flex items-center gap-1.5 border border-gray-700 text-amber-300"
+                            >
+                                <i className="fas fa-book-open"></i> <span className="hidden sm:inline">{viewMode === 'embed' ? 'Mode Teks' : 'Mode Flipbook'}</span>
+                            </button>
+                            {book.flipbookLink && (
+                                <a href={book.flipbookLink} target="_blank" rel="noreferrer" className="bg-primary hover:bg-blue-600 text-white text-xs font-bold py-2 px-3 rounded-xl flex items-center gap-1.5 transition-colors">
+                                    <span className="hidden sm:inline">Buka Tab Baru</span> <i className="fas fa-external-link-alt text-[10px]"></i>
+                                </a>
+                            )}
+                        </div>
+                    </div>
+
+                    {/* Content Display */}
+                    <div className="flex-grow w-full h-full bg-gray-950 flex flex-col items-center justify-center p-2 md:p-6 overflow-hidden">
+                        {viewMode === 'embed' && book.flipbookLink ? (
+                            <iframe 
+                                src={book.flipbookLink} 
+                                className="w-full h-full border-none rounded-2xl shadow-2xl bg-white"
+                                title={`Flipbook ${book.title}`}
+                                allowFullScreen={true}
+                            ></iframe>
+                        ) : (
+                            <div className="max-w-3xl w-full bg-amber-50 text-gray-900 rounded-3xl p-6 md:p-10 shadow-2xl border-4 border-amber-200 flex flex-col justify-between min-h-[60vh] max-h-[80vh] overflow-y-auto">
+                                <div className="border-b-2 border-amber-200 pb-3 mb-4 flex justify-between items-center">
+                                    <span className="text-xs font-black uppercase text-amber-800 tracking-wider">📖 GEBRAK BACA • Halaman {currentPage + 1} dari {samplePages.length}</span>
+                                    <span className="text-xs font-bold text-gray-500">{book.category}</span>
+                                </div>
+                                
+                                <div className="flex-grow text-base md:text-xl leading-relaxed font-sans whitespace-pre-line text-gray-800 py-4">
+                                    {samplePages[currentPage]}
+                                </div>
+
+                                <div className="mt-6 pt-4 border-t-2 border-amber-200 flex justify-between items-center">
+                                    <Button 
+                                        onClick={() => setCurrentPage(prev => Math.max(0, prev - 1))} 
+                                        disabled={currentPage === 0}
+                                        variant="outline" 
+                                        icon="fa-chevron-left"
+                                        className="py-2 px-4 text-xs"
+                                    >
+                                        Sebelumnya
+                                    </Button>
+
+                                    <span className="text-xs font-black text-amber-900">
+                                        {currentPage + 1} / {samplePages.length}
+                                    </span>
+
+                                    <Button 
+                                        onClick={() => setCurrentPage(prev => Math.min(samplePages.length - 1, prev + 1))} 
+                                        disabled={currentPage === samplePages.length - 1}
+                                        variant="primary" 
+                                        icon="fa-chevron-right"
+                                        className="py-2 px-4 text-xs"
+                                    >
+                                        Berikutnya
+                                    </Button>
+                                </div>
+                            </div>
+                        )}
+                    </div>
+                </div>
+            );
+        };
+
+        const UploadView = ({ navigate, addBook, user, showToast }) => {
+            const [formData, setFormData] = useState({
+                title: '',
+                author: user ? user.name : '',
+                category: KATEGORI[0],
+                description: '',
+                flipbookLink: '',
+                coverUrl: ''
+            });
+            const [coverPreview, setCoverPreview] = useState(null);
+            const [isSuccess, setIsSuccess] = useState(false);
+
+            if (!user) {
+                return (
+                    <div className="text-center py-20 px-4 max-w-lg mx-auto">
+                        <div className="w-20 h-20 bg-blue-100 text-primary rounded-3xl flex items-center justify-center text-4xl mx-auto mb-6">
+                            <i className="fas fa-lock"></i>
+                        </div>
+                        <h2 className="text-2xl font-black text-gray-800 mb-2">Kamu Harus Masuk Dulu!</h2>
+                        <p className="text-gray-600 mb-6 font-medium text-sm">Untuk mengunggah karya buku digitalmu ke GEBRAK BACA, silakan masuk terlebih dahulu.</p>
+                        <Button onClick={() => navigate('login')} variant="primary" className="w-full py-3.5 text-base" icon="fa-sign-in-alt">Masuk Sekarang</Button>
+                    </div>
+                );
+            }
+
+            const handleChange = (e) => setFormData({...formData, [e.target.name]: e.target.value});
+
+            const handleFileChange = (e) => {
+                const file = e.target.files[0];
+                if (file) {
+                    if (file.size > 2.5 * 1024 * 1024) {
+                        showToast("Ukuran gambar terlalu besar! Pilih foto di bawah 2.5 MB ya.");
+                        return;
+                    }
+                    const reader = new FileReader();
+                    reader.onloadend = () => {
+                        setCoverPreview(reader.result);
+                    };
+                    reader.readAsDataURL(file);
+                }
+            };
+
+            const handleSubmit = (e) => {
+                e.preventDefault();
+                if(!formData.title || !formData.flipbookLink) {
+                    showToast("Judul dan Link Flipbook tidak boleh kosong ya!"); 
+                    return;
+                }
+
+                const finalCover = coverPreview || formData.coverUrl || `https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?auto=format&fit=crop&w=400&q=80`;
+
+                const newBook = {
+                    id: Date.now(),
+                    title: formData.title,
+                    author: formData.author.trim() || user.name,
+                    class: user.class,
+                    category: formData.category,
+                    description: formData.description || "Sebuah karya cipta dari " + (formData.author || user.name),
+                    cover: finalCover,
+                    views: 0,
+                    likes: 0,
+                    comments: [],
+                    flipbookLink: formData.flipbookLink,
+                    samplePages: [
+                        `Halaman Karya: ${formData.title}\n\nOleh: ${formData.author || user.name}\n\n${formData.description || 'Selamat membaca karya hebat dari sekolah SDN 004 Batu Ampar!'}`
+                    ],
+                    isStudent: user.role !== 'admin',
+                    createdAt: Date.now()
+                };
+
+                addBook(newBook);
+                setIsSuccess(true);
+                showToast("Karya berhasil dikirim ke koleksi!");
+            };
+
+            if (isSuccess) {
+                return (
+                    <div className="max-w-xl mx-auto px-4 py-20 text-center">
+                        <div className="w-24 h-24 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center text-5xl mx-auto mb-6 shadow-inner">
+                            <i className="fas fa-check"></i>
+                        </div>
+                        <h2 className="text-3xl font-black text-gray-800 mb-2">Terima Kasih!</h2>
+                        <p className="text-lg text-gray-600 mb-8 font-medium">Karyamu sudah resmi dikirim dan menjadi bagian dari GEBRAK BACA SDN 004 Batu Ampar.</p>
+                        <Button onClick={() => navigate('student-works')} variant="primary" className="mx-auto" icon="fa-star">Lihat Daftar Karya Murid</Button>
+                    </div>
+                );
+            }
+
+            return (
+                <div className="max-w-3xl mx-auto px-4 py-8 pb-20">
+                    <div className="text-center mb-8">
+                        <h1 className="text-3xl font-black text-gray-800 mb-2">✍️ Unggah Buku Digital</h1>
+                        <p className="text-gray-600 font-medium">Bagikan cerita dan buku buatanmu untuk dibaca seluruh kawan sekolah!</p>
+                    </div>
+
+                    <div className="bg-white rounded-3xl p-6 md:p-10 shadow-lg border border-gray-100">
+                        <form onSubmit={handleSubmit} className="space-y-6">
+                            <div className="grid md:grid-cols-2 gap-6">
+                                <div>
+                                    <label className="block text-gray-700 font-extrabold text-sm mb-2">Judul Buku <span className="text-red-500">*</span></label>
+                                    <input required type="text" name="title" value={formData.title} onChange={handleChange} placeholder="Contoh: Petualangan Si Penyu Cilik" className="w-full bg-gray-50 border-2 border-gray-200 rounded-2xl py-3 px-4 font-bold text-gray-700 focus:outline-none focus:border-primary text-sm" />
+                                </div>
+                                <div>
+                                    <label className="block text-gray-700 font-extrabold text-sm mb-2">Nama Penulis / Pembuat <span className="text-red-500">*</span></label>
+                                    <input required type="text" name="author" value={formData.author} onChange={handleChange} placeholder="Tulis namamu..." className="w-full bg-gray-50 border-2 border-gray-200 rounded-2xl py-3 px-4 font-bold text-gray-700 focus:outline-none focus:border-primary text-sm" />
+                                </div>
+                            </div>
+
+                            <div className="grid md:grid-cols-2 gap-6">
+                                <div>
+                                    <label className="block text-gray-700 font-extrabold text-sm mb-2">Kategori Buku</label>
+                                    <select name="category" value={formData.category} onChange={handleChange} className="w-full bg-gray-50 border-2 border-gray-200 rounded-2xl py-3 px-4 font-bold text-gray-700 focus:outline-none focus:border-primary text-sm">
+                                        {KATEGORI.filter(c => c !== "⭐ Karya Murid").map(c => <option key={c} value={c}>{c}</option>)}
+                                    </select>
+                                </div>
+                                <div>
+                                    <label className="block text-gray-700 font-extrabold text-sm mb-2">Kelas / Peran</label>
+                                    <input type="text" disabled value={user.class} className="w-full bg-gray-100 border-2 border-gray-200 rounded-2xl py-3 px-4 font-bold text-gray-500 cursor-not-allowed text-sm" />
+                                </div>
+                            </div>
+
+                            <div>
+                                <label className="block text-gray-700 font-extrabold text-sm mb-2">🖼️ Sampul Buku (Cover)</label>
+                                <div className="grid md:grid-cols-3 gap-4 items-center bg-gray-50 p-4 rounded-2xl border-2 border-gray-200">
+                                    <div className="md:col-span-2 space-y-3">
+                                        <div>
+                                            <span className="text-xs font-bold text-gray-500 mb-1 block">1. Unggah Foto Sampul dari Perangkat</span>
+                                            <input 
+                                                type="file" 
+                                                accept="image/*" 
+                                                onChange={handleFileChange}
+                                                className="w-full text-xs text-gray-600 file:mr-3 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-black file:bg-primary file:text-white hover:file:bg-blue-600 cursor-pointer"
+                                            />
+                                        </div>
+                                        <div>
+                                            <span className="text-xs font-bold text-gray-500 mb-1 block">2. Atau Tempel Link Gambar Sampul (URL)</span>
+                                            <input 
+                                                type="url" 
+                                                name="coverUrl" 
+                                                value={formData.coverUrl} 
+                                                onChange={handleChange} 
+                                                placeholder="https://..." 
+                                                className="w-full bg-white border border-gray-300 rounded-xl py-2 px-3 text-xs font-bold text-gray-700 focus:outline-none focus:border-primary" 
+                                            />
+                                        </div>
+                                    </div>
+                                    <div className="flex flex-col items-center justify-center border-2 border-dashed border-gray-300 rounded-xl p-2 h-36 bg-white relative overflow-hidden">
+                                        {coverPreview || formData.coverUrl ? (
+                                            <img src={coverPreview || formData.coverUrl} alt="Preview Sampul" className="w-full h-full object-cover rounded-lg" onError={(e)=>{e.target.src="https://placehold.co/300x400/2563eb/white?text=GEBRAK+BACA"}} />
+                                        ) : (
+                                            <div className="text-center text-gray-400 p-2">
+                                                <i className="fas fa-image text-3xl mb-1"></i>
+                                                <p className="text-[10px] font-bold">Pratinjau Sampul</p>
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div>
+                                <label className="block text-gray-700 font-extrabold text-sm mb-2">Deskripsi Singkat Buku</label>
+                                <textarea name="description" value={formData.description} onChange={handleChange} placeholder="Ceritakan gambaran singkat isi bukumu..." rows="3" className="w-full bg-gray-50 border-2 border-gray-200 rounded-2xl py-3 px-4 font-bold text-gray-700 focus:outline-none focus:border-primary text-sm"></textarea>
+                            </div>
+
+                            <div>
+                                <div className="flex justify-between items-end mb-2">
+                                    <label className="block text-gray-700 font-extrabold text-sm">Link Flipbook Buku Digital <span className="text-red-500">*</span></label>
+                                    <span className="text-[11px] font-bold text-blue-700 bg-blue-50 px-2 py-0.5 rounded-md">Heyzine, Canva, AnyFlip, dll</span>
+                                </div>
+                                <input required type="url" name="flipbookLink" value={formData.flipbookLink} onChange={handleChange} placeholder="Contoh: https://heyzine.com/flip-book/..." className="w-full bg-gray-50 border-2 border-gray-200 rounded-2xl py-3 px-4 font-bold text-gray-700 focus:outline-none focus:border-primary text-sm" />
+                            </div>
+
+                            <div className="bg-amber-50 p-4 rounded-2xl border border-amber-200 text-xs text-amber-900 font-semibold flex items-start gap-2">
+                                <i className="fas fa-info-circle text-amber-600 text-base mt-0.5"></i>
+                                <span>Pastikan karya yang kamu unggah merupakan karya sendiri dan menggunakan bahasa yang sopan.</span>
+                            </div>
+
+                            <Button type="submit" variant="primary" className="w-full py-4 text-lg" icon="fa-paper-plane">Kirim Karya Sekarang</Button>
+                        </form>
+                    </div>
+                </div>
+            );
+        };
+
+        const AboutView = () => (
+            <div className="max-w-4xl mx-auto px-4 py-10 pb-20">
+                <div className="bg-white rounded-3xl p-6 md:p-10 shadow-lg border border-gray-100">
+                    <div className="text-center mb-8">
+                        <span className="bg-blue-100 text-blue-800 font-black text-xs px-4 py-1.5 rounded-full uppercase tracking-wider">Gerakan Literasi Sekolah</span>
+                        <h1 className="text-3xl md:text-5xl font-black text-school mt-3 mb-1">GEBRAK BACA</h1>
+                        <p className="text-base font-black text-primary italic mb-2">by Cikgu Fadhil</p>
+                        <p className="text-lg font-bold text-amber-600">SDN 004 BATU AMPAR</p>
+                    </div>
+
+                    <div className="prose prose-blue max-w-none text-gray-700 font-medium leading-relaxed space-y-6 text-base">
+                        <p className="bg-blue-50 p-5 rounded-2xl border-l-4 border-primary text-gray-800 font-semibold">
+                            <strong>GEBRAK BACA (Gerakan Membaca dan Berkarya)</strong> adalah gerakan literasi SDN 004 Batu Ampar yang mengajak murid untuk tetap membaca dan berkarya meskipun akses terhadap ruang perpustakaan konvensional sedang terbatas karena rehabilitasi.
+                        </p>
+
+                        <div>
+                            <h3 className="text-xl font-black text-gray-800 mb-3 flex items-center gap-2">
+                                <i className="fas fa-compass text-primary"></i> Prinsip Utama GEBRAK BACA
+                            </h3>
+                            <div className="grid grid-cols-2 sm:grid-cols-5 gap-2 text-center">
+                                {["BACA", "PAHAMI", "BUAT", "BAGIKAN", "BACA KARYA TEMAN"].map((step, idx) => (
+                                    <div key={idx} className="bg-amber-100 text-amber-950 font-black p-3 rounded-2xl text-xs border border-amber-300">
+                                        <div className="text-lg mb-1">{idx === 0 ? '📖' : idx === 1 ? '🧠' : idx === 2 ? '✍️' : idx === 3 ? '🚀' : '🤝'}</div>
+                                        {step}
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+
+                        <div className="bg-gradient-to-r from-school to-blue-900 text-white p-8 rounded-3xl text-center shadow-md my-8">
+                            <i className="fas fa-quote-left text-3xl text-amber-400 mb-2 block"></i>
+                            <blockquote className="text-xl md:text-2xl font-black italic mb-2 text-amber-300">
+                                “Perpustakaan boleh direhabilitasi, tetapi budaya membaca tidak boleh berhenti.”
+                            </blockquote>
+                            <p className="text-xs text-blue-200 font-bold uppercase tracking-widest">— Tim Literasi SDN 004 Batu Ampar</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        );
+
+        const LoginView = ({ navigate, setUser, showToast }) => {
+            const [loginType, setLoginType] = useState('student'); // 'student' or 'teacher'
+            const [name, setName] = useState('');
+            const [kelas, setKelas] = useState(KELAS[1]);
+            const [password, setPassword] = useState('');
+
+            const handleLogin = (e) => {
+                e.preventDefault();
+
+                if (loginType === 'teacher') {
+                    if (password !== ADMIN_PIN) {
+                        showToast("❌ Password Guru salah! Akses ditolak.");
+                        return;
+                    }
+                    const teacherData = { 
+                        id: 'admin_' + Date.now(), 
+                        name: name.trim() || 'Pak/Bu Guru (Admin)', 
+                        class: 'Guru', 
+                        role: 'admin' 
+                    };
+                    localStorage.setItem('gebrak_user', JSON.stringify(teacherData));
+                    setUser(teacherData);
+                    showToast(`🔓 Berhasil Masuk sebagai Guru (Admin)!`);
+                    navigate('home');
+                    return;
+                }
+
+                // Student Login
+                if (name.trim().length < 2) {
+                    showToast("Nama terlalu pendek!"); 
+                    return;
+                }
+                const studentData = { 
+                    id: Date.now(), 
+                    name: name.trim(), 
+                    class: kelas, 
+                    role: 'student' 
+                };
+                localStorage.setItem('gebrak_user', JSON.stringify(studentData));
+                setUser(studentData);
+                showToast(`Selamat datang, ${name}!`);
+                navigate('home');
+            };
+
+            return (
+                <div className="min-h-[75vh] flex items-center justify-center px-4 py-10">
+                    <div className="bg-white p-8 md:p-10 rounded-3xl shadow-xl w-full max-w-md border-t-8 border-primary">
+                        
+                        {/* Tab Switcher */}
+                        <div className="flex bg-gray-100 p-1.5 rounded-2xl mb-6">
+                            <button 
+                                onClick={() => setLoginType('student')} 
+                                className={`flex-1 py-2.5 rounded-xl font-black text-xs transition-all flex items-center justify-center gap-2 ${loginType === 'student' ? 'bg-white text-primary shadow-sm' : 'text-gray-500 hover:text-gray-800'}`}
+                            >
+                                <span>🎒 Murid / Siswa</span>
+                            </button>
+                            <button 
+                                onClick={() => setLoginType('teacher')} 
+                                className={`flex-1 py-2.5 rounded-xl font-black text-xs transition-all flex items-center justify-center gap-2 ${loginType === 'teacher' ? 'bg-red-600 text-white shadow-sm' : 'text-gray-500 hover:text-gray-800'}`}
+                            >
+                                <i className="fas fa-user-shield"></i>
+                                <span>👨‍🏫 Guru (Admin)</span>
+                            </button>
+                        </div>
+
+                        <div className="text-center mb-6">
+                            <div className={`w-16 h-16 rounded-2xl flex items-center justify-center text-3xl mx-auto mb-3 font-black ${loginType === 'teacher' ? 'bg-red-100 text-red-600' : 'bg-blue-100 text-primary'}`}>
+                                {loginType === 'teacher' ? '🔑' : '🆔'}
+                            </div>
+                            <h2 className="text-2xl font-black text-gray-800">
+                                {loginType === 'teacher' ? 'Masuk Portal Guru' : 'Halo, Sahabat GEBRAK!'}
+                            </h2>
+                            <p className="text-gray-500 font-semibold text-xs mt-1">
+                                {loginType === 'teacher' ? 'Fitur admin untuk mengedit & menghapus karya' : 'Masukkan namamu untuk membaca dan berkarya.'}
+                            </p>
+                        </div>
+
+                        <form onSubmit={handleLogin} className="space-y-4">
+                            <div>
+                                <label className="block text-gray-700 font-extrabold text-sm mb-2">Nama Lengkap / Panggilan</label>
+                                <input 
+                                    required 
+                                    type="text" 
+                                    value={name} 
+                                    onChange={(e)=>setName(e.target.value)} 
+                                    placeholder={loginType === 'teacher' ? "Contoh: Bu Ani, S.Pd." : "Tulis namamu..."} 
+                                    className="w-full bg-gray-50 border-2 border-gray-200 rounded-2xl py-3 px-4 font-bold text-gray-700 focus:outline-none focus:border-primary text-center text-base" 
+                                />
+                            </div>
+
+                            {loginType === 'student' ? (
+                                <div>
+                                    <label className="block text-gray-700 font-extrabold text-sm mb-2">Kelas Berapa?</label>
+                                    <select value={kelas} onChange={(e)=>setKelas(e.target.value)} className="w-full bg-gray-50 border-2 border-gray-200 rounded-2xl py-3 px-4 font-bold text-gray-700 focus:outline-none focus:border-primary text-center text-base cursor-pointer">
+                                        {KELAS.filter(c=>c !== 'Semua Kelas').map(c => <option key={c} value={c}>{c}</option>)}
+                                    </select>
+                                </div>
+                            ) : (
+                                <div>
+                                    <label className="block text-gray-700 font-extrabold text-sm mb-2">Password Rahasia Guru</label>
+                                    <input 
+                                        required 
+                                        type="password" 
+                                        value={password} 
+                                        onChange={(e)=>setPassword(e.target.value)} 
+                                        placeholder="Masukkan Password Rahasia" 
+                                        className="w-full bg-red-50/50 border-2 border-red-200 rounded-2xl py-3 px-4 font-bold text-gray-800 focus:outline-none focus:border-red-500 text-center text-base" 
+                                    />
+                                    <span className="text-[10px] text-gray-400 font-bold block text-center mt-1">Gunakan password yang telah diberikan oleh pengelola.</span>
+                                </div>
+                            )}
+
+                            <Button 
+                                type="submit" 
+                                variant={loginType === 'teacher' ? 'danger' : 'primary'} 
+                                className="w-full py-3.5 mt-2 text-base" 
+                                icon={loginType === 'teacher' ? 'fa-key' : 'fa-sign-in-alt'}
+                            >
+                                {loginType === 'teacher' ? 'Masuk Mode Admin' : 'Masuk Perpustakaan'}
+                            </Button>
+                        </form>
+                    </div>
+                </div>
+            );
+        };
+
+        const App = () => {
+            const [currentRoute, setCurrentRoute] = useState('home');
+            const [user, setUser] = useState(null);
+            const [books, setBooks] = useState([]);
+            const [toast, setToast] = useState('');
+            
+            // Delete confirmation state
+            const [bookToDelete, setBookToDelete] = useState(null);
+            // Edit modal state
+            const [bookToEdit, setBookToEdit] = useState(null);
+
+            const showToast = (msg) => {
+                setToast(msg);
+                setTimeout(() => setToast(''), 4000);
+            };
+
+            const resetToLaunchData = () => {
+                setBooks(initialBooks);
+                localStorage.setItem('gebrak_books', JSON.stringify(initialBooks));
+                showToast("Katalog resmi peluncuran berhasil dimuat ulang!");
+            };
+
+            useEffect(() => {
+                const savedUser = localStorage.getItem('gebrak_user');
+                if (savedUser) setUser(JSON.parse(savedUser));
+
+                const savedBooks = localStorage.getItem('gebrak_books');
+                if (savedBooks) {
+                    setBooks(JSON.parse(savedBooks));
+                } else {
+                    setBooks(initialBooks);
+                    localStorage.setItem('gebrak_books', JSON.stringify(initialBooks));
+                }
+            }, []);
+
+            const navigate = (route) => {
+                window.scrollTo(0, 0);
+                setCurrentRoute(route);
+            };
+
+            const logout = () => {
+                localStorage.removeItem('gebrak_user');
+                setUser(null);
+                showToast("Berhasil keluar.");
+                navigate('home');
+            };
+
+            const addBook = (newBook) => {
+                const updatedBooks = [newBook, ...books];
+                setBooks(updatedBooks);
+                localStorage.setItem('gebrak_books', JSON.stringify(updatedBooks));
+            };
+
+            const updateBook = (updatedBook) => {
+                const updatedBooks = books.map(b => b.id === updatedBook.id ? updatedBook : b);
+                setBooks(updatedBooks);
+                localStorage.setItem('gebrak_books', JSON.stringify(updatedBooks));
+            };
+
+            const handleDeleteBookConfirm = () => {
+                if (!bookToDelete) return;
+                const updatedBooks = books.filter(b => b.id !== bookToDelete.id);
+                setBooks(updatedBooks);
+                localStorage.setItem('gebrak_books', JSON.stringify(updatedBooks));
+                showToast(`🗑️ Buku "${bookToDelete.title}" berhasil dihapus.`);
+                setBookToDelete(null);
+                if (currentRoute === 'detail') navigate('collection');
+            };
+
+            const handleSaveEdit = (editedBook) => {
+                updateBook(editedBook);
+                setBookToEdit(null);
+                showToast(`✏️ Perubahan buku "${editedBook.title}" berhasil disimpan.`);
+            };
+
+            const getBook = (id) => books.find(b => b.id === id);
+
+            const renderView = () => {
+                switch(currentRoute) {
+                    case 'home': return (
+                        <HomeView 
+                            navigate={navigate} 
+                            books={books} 
+                            user={user} 
+                            onEditBook={(b) => setBookToEdit(b)} 
+                            onDeleteBook={(b) => setBookToDelete(b)} 
+                        />
+                    );
+                    case 'collection': return (
+                        <CollectionView 
+                            navigate={navigate} 
+                            books={books} 
+                            user={user} 
+                            onEditBook={(b) => setBookToEdit(b)} 
+                            onDeleteBook={(b) => setBookToDelete(b)} 
+                        />
+                    );
+                    case 'student-works': return (
+                        <CollectionView 
+                            navigate={navigate} 
+                            books={books} 
+                            defaultFilter="student" 
+                            user={user} 
+                            onEditBook={(b) => setBookToEdit(b)} 
+                            onDeleteBook={(b) => setBookToDelete(b)} 
+                        />
+                    );
+                    case 'detail': return (
+                        <BookDetailView 
+                            navigate={navigate} 
+                            getBook={getBook} 
+                            updateBook={updateBook} 
+                            user={user} 
+                            showToast={showToast} 
+                            onEditBook={(b) => setBookToEdit(b)} 
+                            onDeleteBook={(b) => setBookToDelete(b)} 
+                        />
+                    );
+                    case 'reader': return <ReaderView navigate={navigate} getBook={getBook} />;
+                    case 'upload': return <UploadView navigate={navigate} addBook={addBook} user={user} showToast={showToast} />;
+                    case 'about': return <AboutView />;
+                    case 'login': return <LoginView navigate={navigate} setUser={setUser} showToast={showToast} />;
+                    case 'profile': return (
+                        <div className="max-w-md mx-auto py-16 px-4 text-center">
+                            <div className={`w-24 h-24 rounded-full flex items-center justify-center text-4xl mx-auto mb-4 font-black border-4 border-white shadow-md ${user?.role === 'admin' ? 'bg-red-500 text-white' : 'bg-amber-400 text-amber-950'}`}>
+                                {user?.role === 'admin' ? <i className="fas fa-user-shield"></i> : user?.name?.charAt(0)}
+                            </div>
+                            <h2 className="text-2xl font-black text-gray-800">{user?.name}</h2>
+                            <p className="text-gray-500 font-bold text-sm mb-6">
+                                {user?.role === 'admin' ? '👨‍🏫 Guru / Administrator GEBRAK BACA' : user?.class}
+                            </p>
+                            
+                            <div className="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 mb-6 flex justify-around">
+                                <div>
+                                    <div className="text-2xl font-black text-primary">{books.filter(b=>b.author === user?.name).length}</div>
+                                    <div className="text-xs font-bold text-gray-500 uppercase tracking-wider">Karya Diunggah</div>
+                                </div>
+                                {user?.role === 'admin' && (
+                                    <div className="border-l border-gray-100 pl-4">
+                                        <div className="text-2xl font-black text-red-600">{books.length}</div>
+                                        <div className="text-xs font-bold text-gray-500 uppercase tracking-wider">Total Katalog Admin</div>
+                                    </div>
+                                )}
+                            </div>
+                            
+                            <div className="flex flex-col gap-3">
+                                <Button variant="outline" onClick={resetToLaunchData} icon="fa-arrows-rotate" className="text-xs py-2.5">
+                                    Muat Ulang Katalog Launching
+                                </Button>
+                                <Button variant="danger" onClick={logout} icon="fa-sign-out-alt" className="text-xs py-2.5">
+                                    Keluar Akun
+                                </Button>
+                            </div>
+                        </div>
+                    );
+                    default: return <HomeView navigate={navigate} books={books} user={user} onEditBook={(b) => setBookToEdit(b)} onDeleteBook={(b) => setBookToDelete(b)} />;
+                }
+            };
+
+            return (
+                <div className="min-h-screen flex flex-col font-sans text-gray-800 selection:bg-amber-300">
+                    <Toast message={toast} onClose={() => setToast('')} />
+
+                    <ConfirmModal 
+                        isOpen={!!bookToDelete} 
+                        title="Hapus Karya Ini?" 
+                        message={`Apakah Anda yakin ingin menghapus buku "${bookToDelete?.title}"? Tindakan ini tidak dapat dibatalkan.`} 
+                        onConfirm={handleDeleteBookConfirm} 
+                        onCancel={() => setBookToDelete(null)} 
+                    />
+
+                    <EditBookModal 
+                        book={bookToEdit} 
+                        isOpen={!!bookToEdit} 
+                        onClose={() => setBookToEdit(null)} 
+                        onSave={handleSaveEdit} 
+                    />
+
+                    {currentRoute !== 'reader' && <Navbar navigate={navigate} user={user} logout={logout} />}
+                    
+                    <main className="flex-grow">
+                        {renderView()}
+                    </main>
+
+                    {/* Bottom Nav Mobile */}
+                    {currentRoute !== 'reader' && (
+                        <div className="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 flex justify-around p-2 z-50 shadow-lg">
+                            <button onClick={() => navigate('home')} className={`flex flex-col items-center p-1 ${currentRoute === 'home' ? 'text-primary' : 'text-gray-500'}`}>
+                                <i className="fas fa-home text-lg"></i>
+                                <span className="text-[10px] font-bold mt-0.5">Beranda</span>
+                            </button>
+                            <button onClick={() => navigate('collection')} className={`flex flex-col items-center p-1 ${currentRoute === 'collection' ? 'text-primary' : 'text-gray-500'}`}>
+                                <i className="fas fa-book text-lg"></i>
+                                <span className="text-[10px] font-bold mt-0.5">Koleksi</span>
+                            </button>
+                            <button onClick={() => navigate('upload')} className="flex flex-col items-center -mt-6">
+                                <div className="w-12 h-12 bg-primary text-white rounded-full flex items-center justify-center text-xl shadow-lg border-2 border-white">
+                                    <i className="fas fa-cloud-arrow-up"></i>
+                                </div>
+                                <span className="text-[10px] font-bold text-gray-700 mt-0.5">Upload</span>
+                            </button>
+                            <button onClick={() => navigate('student-works')} className={`flex flex-col items-center p-1 ${currentRoute === 'student-works' ? 'text-amber-500' : 'text-gray-500'}`}>
+                                <i className="fas fa-star text-lg"></i>
+                                <span className="text-[10px] font-bold mt-0.5">Karya</span>
+                            </button>
+                            {user ? (
+                                <button onClick={() => navigate('profile')} className={`flex flex-col items-center p-1 ${currentRoute === 'profile' ? (user.role === 'admin' ? 'text-red-600' : 'text-primary') : 'text-gray-500'}`}>
+                                    <i className={`fas ${user.role === 'admin' ? 'fa-user-shield' : 'fa-user-circle'} text-lg`}></i>
+                                    <span className="text-[10px] font-bold mt-0.5">Profil</span>
+                                </button>
+                            ) : (
+                                <button onClick={() => navigate('login')} className={`flex flex-col items-center p-1 ${currentRoute === 'login' ? 'text-primary' : 'text-gray-500'}`}>
+                                    <i className="fas fa-sign-in-alt text-lg"></i>
+                                    <span className="text-[10px] font-bold mt-0.5">Masuk</span>
+                                </button>
+                            )}
+                        </div>
+                    )}
+
+                    {currentRoute !== 'reader' && (
+                        <footer className="bg-school text-blue-100 py-8 mt-auto pb-20 md:pb-8">
+                            <div className="max-w-6xl mx-auto px-4 text-center">
+                                <h3 className="text-xl font-black text-white mb-0.5">GEBRAK BACA</h3>
+                                <p className="text-xs text-amber-300 font-black italic mb-1.5">by Cikgu Fadhil</p>
+                                <p className="text-xs text-blue-200 font-bold mb-3">SDN 004 Batu Ampar — Gerakan Membaca dan Berkarya</p>
+                                <p className="text-xs text-blue-200 font-medium">© 2026 Perpustakaan Digital SDN 004 Batu Ampar. Dibuat untuk anak-anak hebat!</p>
+                            </div>
+                        </footer>
+                    )}
+                </div>
+            );
+        };
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+</body>
+</html>
